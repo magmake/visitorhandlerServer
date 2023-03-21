@@ -3,9 +3,40 @@ const app = express();
 const port = 443;
 const multer = require("multer");
 const upload = multer();
+const path = require("path");
 const fs = require("fs");
 const https = require("https");
 
+const getUniqueFileId = (dirPath) => {
+  let fileCount = 0;
+
+  // Käy läpi kaikki tiedostot ja kansiot
+  const walkSync = (dir, filelist = []) => {
+    const files = fs.readdirSync(dir);
+    filelist = filelist || [];
+    files.forEach((file) => {
+      const filePath = path.join(dir, file);
+      const stat = fs.statSync(filePath);
+
+      if (stat.isDirectory()) {
+        // Käy läpi alikansiot rekursiivisesti
+        filelist = walkSync(filePath, filelist);
+      } else {
+        fileCount++;
+      }
+    });
+    return filelist;
+  };
+
+  walkSync(dirPath);
+  return fileCount;
+};
+
+// Käytä funktiota hakemistoon, jossa tiedostot sijaitsevat
+const directoryPath = path.join(__dirname, "uploads");
+const uniqueId = getUniqueFileId(directoryPath);
+
+console.log(`Uniikki ID: ${uniqueId}`);
 // Luodaan HTTPS-palvelin, joka käyttää luotua avainparia ja sertifikaattia
 const options = {
   key: fs.readFileSync("./cert/key.pem", "utf8"),
@@ -15,7 +46,6 @@ const options = {
 const palvelin = https.createServer(options, app);
 
 app.use(express.json());
-const path = require("path");
 
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "https://localhost:3000");
@@ -74,15 +104,24 @@ app.post("/", upload.single("tiedot"), (req, res) => {
       nimi = `${tiedostonNimi}-${i}`;
       i++;
     }
+    const uniqueId = getUniqueFileId(`./uploads/${date}`);
     // tehdään tiedosto
-    fs.writeFile(`./uploads/${date}/[${time}]_${nimi}.json`, tiedot, (err) => {
-      if (err) {
-        console.log(err);
-        return res.status(500).send(err);
+    const fileData = JSON.parse(tiedot);
+    fileData.uniqueId = uniqueId;
+    const updatedData = JSON.stringify(fileData);
+    fs.writeFile(
+      `./uploads/${date}/[${time}]_${nimi}.json`,
+      updatedData,
+      (err) => {
+        if (err) {
+          console.log(err);
+          return res.status(500).send(err);
+        }
+        console.log("Tiedosto tallennettu");
+        console.log(updatedData);
+        return res.status(200).send("Tiedosto tallennettu");
       }
-      console.log("Tiedosto tallennettu");
-      return res.status(200).send("Tiedosto tallennettu");
-    });
+    );
 
     // Tallenna tiedosto projektiin
   } else {

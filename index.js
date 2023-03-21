@@ -31,6 +31,13 @@ const getUniqueFileId = (dirPath) => {
   walkSync(dirPath);
   return fileCount;
 };
+try {
+  (privateKey = fs.readFileSync("./cert/key.pem", "utf8")),
+    (certificate = fs.readFileSync("./cert/cert.pem", "utf8"));
+} catch (err) {
+  console.error("Virhe tiedoston lukemisessa: ", err);
+  process.exit(1);
+}
 
 // Käytä funktiota hakemistoon, jossa tiedostot sijaitsevat
 const directoryPath = path.join(__dirname, "uploads");
@@ -131,5 +138,4 @@ app.post("/", upload.single("tiedot"), (req, res) => {
 
 palvelin.listen(port, () => {
   console.log(`Example app listening at https://localhost:${port}`);
-  console.log(options);
 });

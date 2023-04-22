@@ -10,27 +10,27 @@ const https = require("https");
 const getUniqueFileId = (dirPath) => {
   let fileCount = 0;
 
-  // Käy läpi kaikki tiedostot ja kansiot
-  const walkSync = (dir, filelist = []) => {
+  // Käy läpi kaikki tiedostot ja kansiot rekursiivisesti
+  const walkSync = (dir) => {
     const files = fs.readdirSync(dir);
-    filelist = filelist || [];
     files.forEach((file) => {
       const filePath = path.join(dir, file);
       const stat = fs.statSync(filePath);
 
       if (stat.isDirectory()) {
         // Käy läpi alikansiot rekursiivisesti
-        filelist = walkSync(filePath, filelist);
+        walkSync(filePath);
       } else {
         fileCount++;
       }
     });
-    return filelist;
   };
 
   walkSync(dirPath);
   return fileCount;
 };
+
+
 try {
   (privateKey = fs.readFileSync("./cert/key.pem", "utf8")),
     (certificate = fs.readFileSync("./cert/cert.pem", "utf8"));
@@ -92,8 +92,6 @@ app.post("/", upload.single("tiedot"), (req, res) => {
   const date = JSON.parse(tiedot).date;
   const time = JSON.parse(tiedot).time;
 
-  console.log(`PALVELIN Tiedoston nimi: ${tiedostonNimi}`);
-  console.log(`PALVELIN Tiedot: ${tiedot}`);
   console.log("Date", date);
 
   //tarkista, että tiedoston nimi löytyy
